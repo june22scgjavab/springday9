@@ -1,0 +1,264 @@
+// application.properties file ( observe )
+// log4j2.properties ( observe)
+// tablescript.sql (observe)
+// pom.xml ( observe)
+-------------------------------------------------------------------------------------------------------------------------------------
+
+@Entity   ====================> please check for @Entity
+class Employee{
+@Id
+@GeneratedValue(strategy=GenerationType.IDENTITY)
+private int employeeId;
+private String name;
+private String designation;
+private String department;
+
+// setters/getters
+// hashCode() and equals()
+// toString()
+}
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+// DTO class object is responsible for carrying the data from one layer to another
+
+public class EmployeeDTO{
+
+private int employeeId;
+private String name;
+private String designation;
+private String department;
+
+// setters/getters
+// hashCode() and equals()
+// toString()
+}
+--------------------------------------------------------------------------------------------------------------------------------------
+
+public class EmployeeException extends Exception {
+   public EmployeeException(String message){
+    super(message);
+  }
+
+}
+
+------------------------------------------------------------------------------------------------------------------------------------
+Validator valid1=new Validator();
+Validator valid2=new Validator();
+// Object creation is always an overhead. 
+// One static method will access another static method
+Validator.validate(employeeDTO);
+
+public class Validator {
+   // We dont have any attributes and member variables
+    // attributes with data or value makes the object different
+    public static void validate(EmployeeDTO employeeDTO){
+        String message=null;
+       if(validateId(employeeDTO.getemployeeId())
+       {
+             message="Validator.INVALID_ID";
+       }
+       // rest of validations 
+     
+        if(message!=null){
+            throw new EmployeeException(message);
+        }
+
+      }
+       private static boolean validateId(int id){
+         return (id<=0) ? false : true;
+       }
+
+    }
+
+   
+
+}
+
+------------------------------------------------------------------------------------------------------------------------------------
+
+// We dont write @Repository here
+
+
+public interface EmployeeRepository implements CrudRepository<Employee,Integer){
+
+}
+-------------------------------------------------------------------------------------------------------------------------------------
+
+// CRUD operations which I will perform
+public interfacer EmployeeService {
+   Integer addEmployee(EmployeeDTO employeeDTO) throws EmployeeException;
+   EmployeeDTO searchEmployee(Integer employeeId) throws EmployeeException;
+   List<EmployeeDTO> getAllEmployees() throws EmployeeException;
+   void deleteEmployee(Integer employeeId) throws EmployeeException;
+   void updateEmployee(Integer employeeId, String email) throws EmployeeException;
+   //void updateEmployee(Intger employeeId, String desig) throws EmployeeException;
+   //void updateEmployee(Intger employeeId, String dept) throws EmployeeException;
+   //void updateEmployee(Intger employeeId, String dept,String desig) throws EmployeeException;
+   // If we have multiple data to be updated what we can plan as a parameter
+   void updateEmployee(Intger employeeId, EmployeeDTO employeeDTO) throws EmployeeException;
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+// Pause and check the code====> The heart of your application .................................
+
+
+
+@Service
+@Transactional
+public class EmployeeServiceImpl implements EmployeeService {
+
+@Autowired
+private EmployeeRepository employeeRepository;
+
+  Integer addEmployee(EmployeeDTO employeeDTO) throws EmployeeException{
+
+  }
+
+  EmployeeDTO searchEmployee(Integer employeeId) throws EmployeeException{
+
+   }
+
+  List<EmployeeDTO> getAllEmployees() throws EmployeeException{
+
+  }
+
+  void deleteEmployee(Integer employeeId) throws EmployeeException{
+
+
+   }
+
+  void updateEmployee(Integer employeeId, String email) throws EmployeeException{
+
+
+   }
+
+}
+-----------------------------------------------------------------------------------------------------------------------------------
+When we are not handling the exception in the code ( API/Controller)
+
+GET http://localhost:9090/xyzcompany/customers/100   <==== We made a request to get the customer with id 100
+
+Suppose we dont have the id 100 in the customer table and we wrote the code for getting the customer details as follows in the 
+API/Controller layer.
+
+
+
+@GetMapping("/customers/{id}")
+	public ResponseEntity<CustomerDTO> getCustomer(@PathVariable("id") int customerId) {
+		
+			CustomerDTO customerDTO = customerService.getCustomer(customerId);
+			return new ResponseEntity<>(customerDTO, HttpStatus.OK);
+
+		
+	}
+
+
+
+Output======>
+{
+    "timestamp": "2020-06-18T08:20:20.705+0000",
+    "status": 500,
+    "error": "Internal Server Error",
+    "trace": "com.infy.exception.InfyBankException: Service.CUSTOMER_NOT_FOUND",
+    "message": "Service.CUSTOMER_UNAVAILABLE",
+    "path": "/infybank/customers/8"
+}
+
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+This can be done if we dont have the knowledge of handling exception in Spring Rest.
+
+
+@GetMapping("/customers/{id}")
+	public ResponseEntity<Object> getCustomer(@PathVariable("id") int customerId) {
+		try {
+			CustomerDTO customerDTO = customerService.getCustomer(customerId);
+			return new ResponseEntity<>(customerDTO, HttpStatus.OK);
+
+		} catch (CustomerException exception) {
+			return new ResponseEntity<>(environment.getProperty(exception.getMessage()),
+					HttpStatus.NOT_FOUND);
+		}
+	}
+
+
+Output
+500 Internal Error
+Customer not available.
+
+ 
+
+--------------------------------------------------------------------------------------------------------------------------------
+But this solution adds more code to the controller and makes it complex. Also if multiple handler methods are present in controller, then this code you may have to repeat in all those methods. Also, there is no way to send more detailed description of exception to the client. So proper exception handling in REST API's is very important. Spring provides multiple ways of exception handling in REST API. In this course, you will learn following two ways of exception handling:
+
+Using @RestControllerAdvice
+Using ResponseStatusException class
+---------------------------------------------------------------------------------------------------------
+
+Using @RestControllerAdvice
+
+@RestControllerAdvice
+public class ExceptionControllerAdvice{
+   // exception handler methods
+}
+
+
+package com.example.utility;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import com.example.exception.CustomerException;
+
+@RestControllerAdvice
+public class ExceptionControllerAdvice {
+	
+	@Autowired
+	private Environment env;
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<String> exceptionHandler(Exception exception) {
+        return new ResponseEntity<>(env.getProperty("General.EXCEPTION_MESSAGE"), HttpStatus.INTERNAL_SERVER_ERROR);			
+	}
+
+	
+	@ExceptionHandler(CustomerException.class)
+	public ResponseEntity<String> exceptionHandler(CustomerException exception)
+	{
+		return new ResponseEntity<>(env.getProperty(exception.getMessage()),HttpStatus.NOT_FOUND);
+	}
+
+}
+--------------------------------------------------------------------------------------------------------------------------------------
+Can we have multiple handlers with the same name?
+Yes
+Can we have multiple methods with the same parameter?
+No. Duplicate methods
+Can we have different handler method names?
+Yes
+Can we write the annotation without the class name? @ExceptionHandler
+Yes 
+
+We wrote two different methods with different names and we kept the parameter type as same and at the same time we are passing the class name as parameter to the @ExceptionHandler Is it possible?
+No
+The application wont start. 
+
+ Ambiguous @ExceptionHandler method mapped for [class com.example.exception.CustomerException]: {public org.springframework.http.ResponseEntity com.example.utility.ExceptionControllerAdvice.exceptionHandler(com.example.exception.CustomerException), public org.springframework.http.ResponseEntity com.example.util
+
+
+
+We wrote two different methods with different names/same names and we kept the parameter type as same and at the same time we are not passing any parameter to the @ExceptionHandler Is it possible?
+No 
+
+The application will start but when start address the handler methods of api. It shows exception.
+
+java.lang.IllegalStateException: Could not resolve parameter [0] in public org.springframework.http.ResponseEntity<com.example.utility.ErrorInfo> com.example.utility.ExceptionControllerAdvice.exceptionHandler(com.example.exception
+--------------------------------------------------------------------------------------------------------
+Spring 5 introduced the ResponseStatusException class.
+
